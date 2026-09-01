@@ -36,10 +36,15 @@ self.addEventListener('fetch', e => {
     e.respondWith(caches.open(CACHE).then(c => c.match(e.request).then(hit =>
       hit || fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res })
     )))
-  } else {
+    } else {
     e.respondWith(fetch(e.request).then(res => {
-      if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()))
-      return res
+      if (!res.ok) return res;
+      
+      // FIX: Clone the response IMMEDIATELY before passing it to the async cache chain
+      const responseToCache = res.clone(); 
+      caches.open(CACHE).then(c => c.put(e.request, responseToCache));
+      
+      return res;
     }).catch(() => caches.match(e.request).then(hit => hit || caches.match('index.html'))))
   }
 })
